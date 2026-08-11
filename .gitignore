@@ -1,0 +1,34 @@
+# Binaries & Executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+shell-chat
+shell-chat-linux*
+shell-chat.exe
+
+# Local Tunnel & Tool Binaries
+ngrok
+ngrok.exe
+.ngrok*
+
+# Host & User SSH Keys
+.ssh/
+id_ed25519*
+id_rsa*
+*.pem
+*.key
+
+# Environment & Config Secrets
+.env
+.env.local
+
+# Logs & Temp files
+*.log
+scratch/
+tmp/
+
+# OS Specific
+.DS_Store
+Thumbs.db
