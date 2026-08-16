@@ -8,6 +8,14 @@
 
 ---
 
+## 📸 Interface
+
+<p align="center">
+  <img src="interface.png" alt="Shell Chat Interface" width="100%">
+</p>
+
+---
+
 ## ✨ Features
 
 - **🌐 Zero Client Install** — Connect from any terminal on Windows, macOS, Linux, or Android (Termux) with standard OpenSSH: `ssh <server_ip> -p 10000`.
