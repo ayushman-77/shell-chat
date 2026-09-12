@@ -63,6 +63,18 @@ ssh localhost -p 10000
 ssh your-server-ip -p 2222
 ```
 
+### 3. Run with Docker
+
+If you prefer using Docker, a `Dockerfile` is provided for a lightweight, containerized build:
+
+```bash
+# Build the Docker image
+docker build -t shell-chat:latest .
+
+# Run the container (maps port 10000)
+docker run -d -p 10000:10000 --name shell-chat shell-chat:latest
+```
+
 ---
 
 ## ⌨️ Controls & Keybindings
