@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-
 	"github.com/ayushman-77/shell-chat/internal/actor"
 	"github.com/ayushman-77/shell-chat/internal/tui/styles"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // DMSelectedMsg is emitted when a user selects a DM or online member to chat with.
@@ -118,6 +117,16 @@ func (m MembersView) ClearUnread(userID int64) MembersView {
 }
 
 // totalItems returns the total number of selectable items (online users + DMs).
+const maxNameLength = 12 // max chars for username (short enough to keep unread dot aligned)
+
+func truncateName(name string) string {
+	r := []rune(name)
+	if len(r) <= maxNameLength {
+		return name
+	}
+	return string(r[:maxNameLength-3]) + "..."
+}
+
 func (m MembersView) totalItems() int {
 	return len(m.onlineUsers) + len(m.dms)
 }
@@ -175,10 +184,10 @@ func (m MembersView) View() string {
 		Bold(true).
 		Foreground(styles.TextDim).
 		Render("  ONLINE")
-	b.WriteString(onlineHeading + "\n")
+	fmt.Fprintf(&b, "%s\n", onlineHeading)
 
 	sep := styles.HelpStyle.Render("  " + strings.Repeat("─", max(0, m.width-4)))
-	b.WriteString(sep + "\n")
+	fmt.Fprintf(&b, "%s\n", sep)
 
 	for i, u := range m.onlineUsers {
 		dot := lipgloss.NewStyle().Foreground(styles.Success).Render("●")
@@ -188,25 +197,25 @@ func (m MembersView) View() string {
 				Foreground(styles.TextBright).
 				Background(styles.PrimaryDark).
 				Bold(true).
-				Render(fmt.Sprintf(" ▶ ● %s", u.Username))
+				Render(fmt.Sprintf(" ▶ ● %s", truncateName(u.Username)))
 		} else {
-			line = fmt.Sprintf("   %s %s", dot, lipgloss.NewStyle().Foreground(styles.TextBright).Render(u.Username))
+			line = fmt.Sprintf("   %s %s", dot, lipgloss.NewStyle().Foreground(styles.TextBright).Render(truncateName(u.Username)))
 		}
-		b.WriteString(line + "\n")
+		fmt.Fprintf(&b, "%s\n", line)
 	}
 
 	if len(m.onlineUsers) == 0 {
-		b.WriteString(styles.HelpStyle.Render("  None online\n"))
+		fmt.Fprintf(&b, "%s\n", styles.HelpStyle.Render("  None online\n"))
 	}
 
 	// 2. DIRECT MESSAGES SECTION
-	b.WriteString("\n")
+	fmt.Fprintf(&b, "\n")
 	dmHeading := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(styles.TextDim).
 		Render("  DIRECT MESSAGES")
-	b.WriteString(dmHeading + "\n")
-	b.WriteString(sep + "\n")
+	fmt.Fprintf(&b, "%s\n", dmHeading)
+	fmt.Fprintf(&b, "%s\n", sep)
 
 	for j, dm := range m.dms {
 		globalIdx := len(m.onlineUsers) + j
@@ -231,15 +240,15 @@ func (m MembersView) View() string {
 				Foreground(styles.TextBright).
 				Background(styles.PrimaryDark).
 				Bold(true).
-				Render(fmt.Sprintf(" ▶ %s %s%s", icon, dm.Username, unreadDot))
+				Render(fmt.Sprintf(" ▶ %s %s%s", icon, truncateName(dm.Username), unreadDot))
 		} else {
-			line = fmt.Sprintf("   %s %s%s", icon, lipgloss.NewStyle().Foreground(styles.TextBright).Render(dm.Username), unreadDot)
+			line = fmt.Sprintf("   %s %s%s", icon, lipgloss.NewStyle().Foreground(styles.TextBright).Render(truncateName(dm.Username)), unreadDot)
 		}
-		b.WriteString(line + "\n")
+		fmt.Fprintf(&b, "%s\n", line)
 	}
 
 	if len(m.dms) == 0 {
-		b.WriteString(styles.HelpStyle.Render("  No direct messages\n"))
+		fmt.Fprintf(&b, "%s\n", styles.HelpStyle.Render("  No direct messages\n"))
 	}
 
 	return b.String()

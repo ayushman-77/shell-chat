@@ -121,18 +121,18 @@ func (s Sidebar) View() string {
 		Bold(true).
 		Foreground(styles.Accent).
 		Render("  ⚡ SHELL CHAT")
-	b.WriteString(header + "\n")
+	fmt.Fprintf(&b, "%s\n", header)
 
 	// Separator
 	sep := styles.HelpStyle.Render("  " + strings.Repeat("─", max(0, s.width-4)))
-	b.WriteString(sep + "\n\n")
+	fmt.Fprintf(&b, "%s\n\n", sep)
 
 	// Channels header
 	chHeading := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(styles.TextDim).
 		Render("  CHANNELS")
-	b.WriteString(chHeading + "\n")
+	fmt.Fprintf(&b, "%s\n", chHeading)
 
 	// Channels list
 	for j, ch := range s.channels {
@@ -166,15 +166,15 @@ func (s Sidebar) View() string {
 				Background(styles.PrimaryDark).
 				Bold(true).
 				Render(fmt.Sprintf(" ▶ %s %s%s", prefix, ch.Name, unreadDot))
-			b.WriteString(" " + badge + "\n")
+			fmt.Fprintf(&b, "%s\n", badge)
 		} else {
 			name := lipgloss.NewStyle().Foreground(styles.Text).Render(ch.Name)
-			b.WriteString(fmt.Sprintf("   %s %s%s\n", icon, name, unreadDot))
+			fmt.Fprintf(&b, "%s %s%s\n", icon, name, unreadDot)
 		}
 	}
 
 	if len(s.channels) == 0 {
-		b.WriteString(styles.HelpStyle.Render("  No channels\n"))
+		fmt.Fprintf(&b, "%s\n", styles.HelpStyle.Render("  No channels\n"))
 	}
 
 	return b.String()

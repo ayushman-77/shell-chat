@@ -278,41 +278,38 @@ func (l LoginView) View() string {
 		Align(lipgloss.Center).
 		Render(logo + "\n" + subtitle)
 
-	b.WriteString(headerBlock)
-	b.WriteString("\n\n")
+	fmt.Fprintf(&b, "%s\n\n", headerBlock)
 
 	// Input fields based on state
-	b.WriteString(styles.MessageContent.Render("  Username: "))
-	b.WriteString(l.username.View())
-	b.WriteString("\n\n")
+	fmt.Fprintf(&b, "%s%s\n\n", styles.MessageContent.Render("  Username: "), l.username.View())
 
 	if l.state >= statePassword {
-		b.WriteString(styles.MessageContent.Render("  Password: "))
-		b.WriteString(l.password.View())
-		b.WriteString("\n\n")
+		fmt.Fprintf(&b, "%s%s\n\n", styles.MessageContent.Render("  Password: "), l.password.View())
+	
+	
 	}
 
 	if l.state >= stateRegisterConfirm {
-		b.WriteString(styles.MessageContent.Render("  Confirm:  "))
-		b.WriteString(l.confirm.View())
-		b.WriteString("\n\n")
+		fmt.Fprintf(&b, "%s%s\n\n", styles.MessageContent.Render("  Confirm:  "), l.confirm.View())
+	
+	
 	}
 
 	if l.state >= stateRegisterDisplayName {
-		b.WriteString(styles.MessageContent.Render("  Display:  "))
-		b.WriteString(l.displayName.View())
-		b.WriteString("\n\n")
+		fmt.Fprintf(&b, "%s%s\n\n", styles.MessageContent.Render("  Display:  "), l.displayName.View())
+	
+	
 	}
 
 	// Error / Status Message
 	if l.errMsg != "" {
-		b.WriteString("  ")
+		fmt.Fprintf(&b, "  ")
 		if strings.HasPrefix(l.errMsg, "New") || strings.HasPrefix(l.errMsg, "Welcome") {
-			b.WriteString(styles.HelpStyle.Render(l.errMsg))
+			fmt.Fprintf(&b, "%s\n", styles.HelpStyle.Render(l.errMsg))
 		} else {
-			b.WriteString(styles.ErrorStyle.Render(l.errMsg))
+			fmt.Fprintf(&b, "%s\n", styles.ErrorStyle.Render(l.errMsg))
 		}
-		b.WriteString("\n\n")
+		fmt.Fprintf(&b, "\n\n")
 	}
 
 	// Centered Help Footer
@@ -326,7 +323,7 @@ func (l LoginView) View() string {
 		Width(48).
 		Align(lipgloss.Center).
 		Render(styles.HelpStyle.Render(helpText))
-	b.WriteString(footer)
+	fmt.Fprintf(&b, "%s\n", footer)
 
 	// Wrap in a box
 	box := lipgloss.NewStyle().

@@ -312,7 +312,7 @@ func (m MessageView) renderMessages() string {
 				styles.TitleStyle.Render("📢 Welcome to #announcements") + "\n" +
 					styles.HelpStyle.Render("Official server updates, member joins, and announcements."),
 			)
-		b.WriteString("\n" + annHeader + "\n\n" + styles.HelpStyle.Render(strings.Repeat("─", usableWidth)) + "\n\n")
+		fmt.Fprintf(&b, "\n%s\n\n%s\n\n", annHeader, styles.HelpStyle.Render(strings.Repeat("─", usableWidth)))
 	}
 
 	// 2. Messages stored in chronological ASC order (oldest first)
@@ -332,14 +332,14 @@ func (m MessageView) renderMessages() string {
 				Render(
 					lipgloss.NewStyle().Bold(true).Foreground(styles.Cyan).Render("📢 "+annText) + "  " + timeStr,
 				)
-			b.WriteString(card + "\n\n")
+			fmt.Fprintf(&b, "%s\n\n", card)
 			lastAuthor = 0
 			continue
 		}
 
 		// System message with word wrapping and generous spacing
 		if msg.AuthorID == 0 {
-			b.WriteString("\n")
+			fmt.Fprintf(&b, "\n")
 			sysWidth := max(10, m.viewport.Width-6)
 			wrappedSys := lipgloss.NewStyle().
 				Width(sysWidth).
@@ -349,12 +349,12 @@ func (m MessageView) renderMessages() string {
 			lines := strings.Split(wrappedSys, "\n")
 			for i, line := range lines {
 				if i == 0 {
-					b.WriteString(fmt.Sprintf("  ⚡ %s\n", line))
+					fmt.Fprintf(&b, "  ⚡ %s\n", line)
 				} else {
-					b.WriteString(fmt.Sprintf("     %s\n", line))
+					fmt.Fprintf(&b, "     %s\n", line)
 				}
 			}
-			b.WriteString("\n")
+			fmt.Fprintf(&b, "\n")
 			lastAuthor = 0
 			continue
 		}
@@ -373,7 +373,7 @@ func (m MessageView) renderMessages() string {
 		if msg.AuthorID != lastAuthor {
 			// New author header with user badge & timestamp
 			if lastAuthor != 0 {
-				b.WriteString("\n")
+				fmt.Fprintf(&b, "\n")
 			}
 
 			var authorBadge string
@@ -390,7 +390,7 @@ func (m MessageView) renderMessages() string {
 			}
 
 			timeStr := styles.MessageTime.Render(fmt.Sprintf("[%s]", timestamp))
-			b.WriteString(fmt.Sprintf("  %s  %s\n", authorBadge, timeStr))
+			fmt.Fprintf(&b, "  %s  %s\n", authorBadge, timeStr)
 		}
 
 		// Message content with colored left bar and word wrapping
@@ -406,7 +406,7 @@ func (m MessageView) renderMessages() string {
 			if strings.TrimSpace(line) == "" {
 				continue
 			}
-			b.WriteString(fmt.Sprintf("    %s %s\n", bar, line))
+			fmt.Fprintf(&b, "    %s %s\n", bar, line)
 		}
 
 		lastAuthor = msg.AuthorID
@@ -414,18 +414,18 @@ func (m MessageView) renderMessages() string {
 
 	// Typing indicator
 	if len(m.typing) > 0 {
-		b.WriteString("\n")
+		fmt.Fprintf(&b, "\n")
 		typingText := strings.Join(m.typing, ", ")
 		if len(m.typing) == 1 {
 			if m.typing[0] == "Spark" {
-				b.WriteString(styles.HelpStyle.Render("  💬 🤖 Spark is thinking..."))
+				fmt.Fprintf(&b, "%s\n", styles.HelpStyle.Render("  💬 🤖 Spark is thinking..."))
 			} else {
 				typingText += " is typing..."
-				b.WriteString(styles.HelpStyle.Render("  💬 " + typingText))
+				fmt.Fprintf(&b, "%s\n", styles.HelpStyle.Render("  💬 " + typingText))
 			}
 		} else {
 			typingText += " are typing..."
-			b.WriteString(styles.HelpStyle.Render("  💬 " + typingText))
+			fmt.Fprintf(&b, "%s\n", styles.HelpStyle.Render("  💬 " + typingText))
 		}
 	}
 

@@ -243,7 +243,7 @@ func (m Modal) View() string {
 			Width(52).
 			Align(lipgloss.Center).
 			Render(title)
-		b.WriteString(header + "\n\n")
+		fmt.Fprintf(&b, "%s\n\n", header)
 
 		fieldLabel := func(label string, idx int) string {
 			st := styles.MessageContent
@@ -253,23 +253,23 @@ func (m Modal) View() string {
 			return st.Render(fmt.Sprintf("  %-17s", label))
 		}
 
-		b.WriteString(fieldLabel("New Username:", 0) + m.input.View() + "\n\n")
-		b.WriteString(fieldLabel("Current Password:", 1) + m.currPassInput.View() + "\n\n")
-		b.WriteString(fieldLabel("New Password:", 2) + m.newPassInput.View() + "\n\n")
+		fmt.Fprintf(&b, "%s%s\n\n", fieldLabel("New Username:", 0), m.input.View())
+		fmt.Fprintf(&b, "%s%s\n\n", fieldLabel("Current Password:", 1), m.currPassInput.View())
+		fmt.Fprintf(&b, "%s%s\n\n", fieldLabel("New Password:", 2), m.newPassInput.View())
 
 		if m.errMsg != "" {
 			errText := lipgloss.NewStyle().
 				Foreground(styles.Error).
 				Bold(true).
 				Render("  " + m.errMsg)
-			b.WriteString(errText + "\n\n")
+			fmt.Fprintf(&b, "%s\n\n", errText)
 		}
 
 		footer := lipgloss.NewStyle().
 			Width(52).
 			Align(lipgloss.Center).
 			Render(styles.HelpStyle.Render("[Tab] Next Field  │  [Enter] Save  │  [Esc] Cancel"))
-		b.WriteString(footer)
+		fmt.Fprintf(&b, "%s\n", footer)
 
 		return lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -292,7 +292,7 @@ func (m Modal) View() string {
 			Width(56).
 			Align(lipgloss.Center).
 			Render(title)
-		b.WriteString(header + "\n\n")
+		fmt.Fprintf(&b, "%s\n\n", header)
 
 		section := func(name string) string {
 			return lipgloss.NewStyle().Bold(true).Foreground(styles.Accent).Render(name) + "\n"
@@ -303,26 +303,26 @@ func (m Modal) View() string {
 			return fmt.Sprintf("  %s %s\n", k, d)
 		}
 
-		b.WriteString(section("NAVIGATION"))
-		b.WriteString(row("Tab", "Cycle focus (Input / Channels / Online)"))
-		b.WriteString(row("Up / Down", "Select channel or online member"))
-		b.WriteString(row("Enter", "Send message / Open channel or DM"))
-		b.WriteString(row("Esc", "Focus chat input / Return to bottom"))
-		b.WriteString(row("PgUp / PgDn", "Scroll message history up / down\n"))
+		fmt.Fprintf(&b, "%s\n", section("NAVIGATION"))
+		fmt.Fprintf(&b, "%s\n", row("Tab", "Cycle focus (Input / Channels / Online)"))
+		fmt.Fprintf(&b, "%s\n", row("Up / Down", "Select channel or online member"))
+		fmt.Fprintf(&b, "%s\n", row("Enter", "Send message / Open channel or DM"))
+		fmt.Fprintf(&b, "%s\n", row("Esc", "Focus chat input / Return to bottom"))
+		fmt.Fprintf(&b, "%s\n", row("PgUp / PgDn", "Scroll message history up / down\n"))
 
-		b.WriteString(section("COMMANDS"))
-		b.WriteString(row("/ask <query>", "Ask Spark AI (with rolling memory)"))
-		b.WriteString(row("/calc <expr>", "Fast in-terminal math calculator"))
-		b.WriteString(row("/search <kw>", "Search past message history"))
-		b.WriteString(row("/tz <offset>", "Set timezone (e.g. /tz IST, /tz +5:30)"))
-		b.WriteString(row("/settings", "Change username & password"))
-		b.WriteString(row("Ctrl+C", "Quit application\n"))
+		fmt.Fprintf(&b, "%s\n", section("COMMANDS"))
+		fmt.Fprintf(&b, "%s\n", row("/ask <query>", "Ask Spark AI (with rolling memory)"))
+		fmt.Fprintf(&b, "%s\n", row("/calc <expr>", "Fast in-terminal math calculator"))
+		fmt.Fprintf(&b, "%s\n", row("/search <kw>", "Search past message history"))
+		fmt.Fprintf(&b, "%s\n", row("/tz <offset>", "Set timezone (e.g. /tz IST, /tz +5:30)"))
+		fmt.Fprintf(&b, "%s\n", row("/settings", "Change username & password"))
+		fmt.Fprintf(&b, "%s\n", row("Ctrl+C", "Quit application\n"))
 
 		footer := lipgloss.NewStyle().
 			Width(56).
 			Align(lipgloss.Center).
 			Render(styles.HelpStyle.Render("[Press Esc or Enter to close]"))
-		b.WriteString(footer)
+		fmt.Fprintf(&b, "%s\n", footer)
 
 		return lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

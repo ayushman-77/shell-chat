@@ -37,7 +37,6 @@ type FocusArea int
 
 const (
 	FocusSidebarArea FocusArea = iota
-	FocusChatArea
 	FocusInputArea
 	FocusRightSidebar
 )
@@ -545,7 +544,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 			var sb strings.Builder
-			sb.WriteString(fmt.Sprintf("🔍 Found %d message(s) matching \"%s\":\n", len(matches), query))
+			fmt.Fprintf(&sb, "🔍 Found %d message(s) matching \"%s\":\n", len(matches), query)
 			for i, m := range matches {
 				author := m.AuthorName
 				if author == "" {
@@ -556,10 +555,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(snippet) > 80 {
 					snippet = snippet[:77] + "..."
 				}
-				sb.WriteString(fmt.Sprintf("  %d. [%s] %s: %s", i+1, timeStr, author, snippet))
-				if i < len(matches)-1 {
-					sb.WriteString("\n")
-				}
+				fmt.Fprintf(&sb, "  %d. [%s] %s: %s\n", i+1, timeStr, author, snippet)
 			}
 			a.msgView = a.msgView.AddSystemMessage(sb.String())
 			return a, nil
@@ -794,7 +790,6 @@ func (a *App) updateChatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Tab cycles: Input -> Channels (Left) -> Chat History (Scroll) -> Members/DMs (Right) -> Input
 	if key.Matches(msg, Keys.ToggleFocus) {
-		showRight := a.width >= 80
 		switch a.focus {
 		case FocusInputArea:
 			a.focus = FocusSidebarArea
@@ -803,31 +798,11 @@ func (a *App) updateChatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			a.membersView = a.membersView.SetFocused(false)
 			a.input = a.input.Blur()
 		case FocusSidebarArea:
-			a.focus = FocusChatArea
+			a.focus = FocusRightSidebar
 			a.sidebar = a.sidebar.SetFocused(false)
-			a.msgView = a.msgView.SetFocused(true)
-			a.membersView = a.membersView.SetFocused(false)
+			a.msgView = a.msgView.SetFocused(false)
+			a.membersView = a.membersView.SetFocused(true)
 			a.input = a.input.Blur()
-		case FocusChatArea:
-			if showRight {
-				a.focus = FocusRightSidebar
-				a.sidebar = a.sidebar.SetFocused(false)
-				a.msgView = a.msgView.SetFocused(false)
-				a.membersView = a.membersView.SetFocused(true)
-				a.input = a.input.Blur()
-			} else if a.input.IsDisabled() {
-				a.focus = FocusSidebarArea
-				a.sidebar = a.sidebar.SetFocused(true)
-				a.msgView = a.msgView.SetFocused(false)
-				a.membersView = a.membersView.SetFocused(false)
-				a.input = a.input.Blur()
-			} else {
-				a.focus = FocusInputArea
-				a.sidebar = a.sidebar.SetFocused(false)
-				a.msgView = a.msgView.SetFocused(false)
-				a.membersView = a.membersView.SetFocused(false)
-				a.input = a.input.Focus()
-			}
 		case FocusRightSidebar:
 			if a.input.IsDisabled() {
 				a.focus = FocusSidebarArea
@@ -897,10 +872,10 @@ func (a *App) updateChatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	if key.Matches(msg, Keys.FocusChat) {
-		a.focus = FocusChatArea
+		a.focus = FocusRightSidebar
 		a.sidebar = a.sidebar.SetFocused(false)
-		a.msgView = a.msgView.SetFocused(true)
-		a.membersView = a.membersView.SetFocused(false)
+		a.msgView = a.msgView.SetFocused(false)
+		a.membersView = a.membersView.SetFocused(true)
 		a.input = a.input.Blur()
 		return a, nil
 	}
@@ -930,36 +905,6 @@ func (a *App) updateChatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		a.sidebar, cmd = a.sidebar.Update(msg)
 		cmds = append(cmds, cmd)
-	case FocusChatArea:
-		switch msg.String() {
-		case "up", "k":
-			a.msgView = a.msgView.LineUp(1)
-			return a, nil
-		case "down", "j":
-			a.msgView = a.msgView.LineDown(1)
-			return a, nil
-		case "home", "g":
-			a.msgView = a.msgView.GotoTop()
-			return a, nil
-		case "end", "G":
-			a.msgView = a.msgView.GotoBottom()
-			return a, nil
-		case "pgup", "ctrl+u":
-			a.msgView = a.msgView.PageUp()
-			return a, nil
-		case "pgdown", "ctrl+d":
-			a.msgView = a.msgView.PageDown()
-			return a, nil
-		case "enter", "i":
-			a.focus = FocusInputArea
-			a.msgView = a.msgView.SetFocused(false).GotoBottom()
-			a.input = a.input.Focus()
-			return a, nil
-		default:
-			var cmd tea.Cmd
-			a.msgView, cmd = a.msgView.Update(msg)
-			cmds = append(cmds, cmd)
-		}
 	case FocusInputArea:
 		var cmd tea.Cmd
 		a.input, cmd = a.input.Update(msg)
@@ -1221,10 +1166,10 @@ func (a *App) selectChannel(ch *models.Channel) tea.Cmd {
 	a.msgView = a.msgView.SetChannel(ch.Name, ch.Topic)
 	if ch.Type == models.ChannelTypeAnnouncement {
 		a.input = a.input.SetDisabled(true).SetPlaceholder("#announcements is read-only")
-		a.focus = FocusChatArea
-		a.msgView = a.msgView.SetFocused(true)
+		a.focus = FocusRightSidebar
+		a.msgView = a.msgView.SetFocused(false)
 		a.sidebar = a.sidebar.SetFocused(false)
-		a.membersView = a.membersView.SetFocused(false)
+		a.membersView = a.membersView.SetFocused(true)
 	} else {
 		a.input = a.input.SetDisabled(false).SetPlaceholder(fmt.Sprintf("Message #%s", ch.Name)).Focus()
 		a.focus = FocusInputArea

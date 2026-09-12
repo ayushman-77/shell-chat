@@ -63,9 +63,9 @@ func SearchLiveWeb(ctx context.Context, query string) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("\n\n[Live Real-Time Web Search Results (Current & Grounded)]:\n")
+	fmt.Fprintf(&sb, "\n\n[Live Real-Time Web Search Results (Current & Grounded)]:\n")
 	for i, r := range results {
-		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, r))
+		fmt.Fprintf(&sb, "%d. %s\n", i+1, r)
 	}
 
 	return sb.String()
