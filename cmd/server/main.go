@@ -88,16 +88,16 @@ func main() {
 
 	// 8. Start SSH server
 	sshSrv, err := sshserver.NewServer(&sshserver.ServerConfig{
-		Host:        cfg.SSHHost,
-		Port:        cfg.SSHPort,
-		HostKeyPath: cfg.HostKeyPath,
-		Registry:    registry,
-		Store:       db,
-		Broker:      broker,
-		Logger:      logger,
-		UserStore:   userStore,
-		GuildStore:  guildStore,
-		MsgStore:    msgStore,
+		Host:         cfg.SSHHost,
+		Port:         cfg.SSHPort,
+		HostKeyPath:  cfg.HostKeyPath,
+		Registry:     registry,
+		Store:        db,
+		Broker:       broker,
+		Logger:       logger,
+		UserStore:    userStore,
+		GuildStore:   guildStore,
+		MsgStore:     msgStore,
 		Coalescer:    coalescerInstance,
 		GeminiAPIKey: cfg.GeminiAPIKey,
 		GeminiModel:  cfg.GeminiModel,
@@ -114,10 +114,12 @@ func main() {
 	fmt.Println("  ╔══════════════════════════════════════════╗")
 	fmt.Println("  ║       ⚡ SHELL CHAT SERVER RUNNING       ║")
 	fmt.Println("  ╠══════════════════════════════════════════╣")
-	fmt.Printf("  ║  Listening on %s:%-20s  ║\n", cfg.SSHHost, cfg.SSHPort)
+	hostPort := fmt.Sprintf("%s:%s", cfg.SSHHost, cfg.SSHPort)
+	fmt.Printf("  ║  Listening on %-27s║\n", hostPort)
 	fmt.Println("  ╠══════════════════════════════════════════╣")
 	fmt.Println("  ║  To connect:                             ║")
-	fmt.Printf("  ║    ssh YOUR_IP -p %-20s  ║\n", cfg.SSHPort)
+	sshLine := fmt.Sprintf("ssh YOUR_IP -p %s", cfg.SSHPort)
+	fmt.Printf("  ║  %-40s║\n", sshLine)
 	fmt.Println("  ║                                          ║")
 	fmt.Println("  ║  Press Ctrl+C to stop the server.        ║")
 	fmt.Println("  ╚══════════════════════════════════════════╝")
