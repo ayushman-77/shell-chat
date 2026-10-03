@@ -82,12 +82,7 @@ func NewLoginView(username string, userStore *storage.UserStore) LoginView {
 		userStore:   userStore,
 	}
 
-	// Suggest default username if present, but keep field focused and editable
-	if username != "" && !strings.HasPrefix(username, "u0_") {
-		l.username.SetValue(username)
-		l.displayName.SetValue(username)
-	}
-
+	// Removed default username prepopulation as requested by the user
 	l.username.Focus()
 	return l
 }
@@ -163,6 +158,12 @@ func (l LoginView) handleEnter() (LoginView, tea.Cmd) {
 		// Check if user exists in database
 		exists, _ := l.userStore.UsernameExists(context.Background(), username)
 		if exists {
+			user, err := l.userStore.GetUserByUsername(context.Background(), username)
+			if err == nil && user.Role == "banned" {
+				l.errMsg = "This account has been permanently banned."
+				return l, nil
+			}
+
 			l.isNewUser = false
 			l.state = statePassword
 			l.password.Placeholder = "Enter your password"
@@ -179,7 +180,11 @@ func (l LoginView) handleEnter() (LoginView, tea.Cmd) {
 		l.password.SetValue("")
 		l.username.Blur()
 		l.password.Focus()
-		l.errMsg = "New account! Choose a password to register."
+		if username == "admin" {
+			l.errMsg = "Admin Initialization! Choose an admin password."
+		} else {
+			l.errMsg = "New account! Choose a password to register."
+		}
 		return l, nil
 
 	case statePassword:
@@ -210,6 +215,12 @@ func (l LoginView) handleEnter() (LoginView, tea.Cmd) {
 			l.confirm.SetValue("")
 			return l, nil
 		}
+		
+		if l.username.Value() == "admin" {
+			// Skip display name step for admin
+			return l, l.registerUser("admin")
+		}
+
 		l.state = stateRegisterDisplayName
 		l.confirm.Blur()
 		l.displayName.Focus()
@@ -276,7 +287,7 @@ func (l LoginView) View() string {
 	headerBlock := lipgloss.NewStyle().
 		Width(48).
 		Align(lipgloss.Center).
-		Render(logo + "\n" + subtitle)
+		Render(logo + "\n\n\n" + subtitle)
 
 	fmt.Fprintf(&b, "%s\n\n", headerBlock)
 

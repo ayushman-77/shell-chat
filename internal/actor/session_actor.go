@@ -138,6 +138,14 @@ func (s *SessionActor) Receive(msg Message) {
 		}:
 		default:
 		}
+	case DeliverBan:
+		if prog != nil {
+			prog.Send(UserBannedMsg{})
+		}
+		select {
+		case s.msgChan <- UserBannedMsg{}:
+		default:
+		}
 	}
 }
 

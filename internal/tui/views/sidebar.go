@@ -147,7 +147,7 @@ func (s Sidebar) View() string {
 
 		var unreadDot string
 		if hasUnread {
-			// Blue dot on the RIGHT side of the channel name!
+			// Unread badge
 			unreadDot = " " + lipgloss.NewStyle().Foreground(styles.Primary).Bold(true).Render("●")
 		}
 

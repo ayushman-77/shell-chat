@@ -78,3 +78,9 @@ type DeliverProfileUpdate struct {
 	OldUsername string
 	NewUsername string
 }
+
+// DeliverBan is sent to a SessionActor when the user is banned.
+type DeliverBan struct{}
+
+// UserBannedMsg is sent to the BubbleTea program to kick the active user.
+type UserBannedMsg struct{}

@@ -65,13 +65,13 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		wish.WithPublicKeyAuth(publicKeyAuthHandler(cfg.UserStore)),
 		wish.WithMiddleware(
 			// Middleware chain: FILO execution order
-			// 1. BubbleTea middleware (outermost) — creates interactive TUI per session
+			// BubbleTea middleware (outermost) — creates interactive TUI per session
 			bm.Middleware(makeTeaHandler(cfg)),
-			// 2. Active terminal middleware — reject non-PTY connections
+			// Active terminal middleware — reject non-PTY connections
 			activeterm.Middleware(),
-			// 3. Security middleware — drop malicious envs, reject port forwarding
+			// Security middleware — drop malicious envs, reject port forwarding
 			SecurityMiddleware(),
-			// 4. Logging middleware
+			// Logging middleware
 			lm.Middleware(),
 		),
 	)

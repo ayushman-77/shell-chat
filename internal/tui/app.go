@@ -30,6 +30,8 @@ type ViewState int
 const (
 	ViewLogin ViewState = iota
 	ViewChat
+	ViewAdmin
+	ViewBanned
 )
 
 // FocusArea tracks which panel has keyboard focus in the chat view.
@@ -67,6 +69,7 @@ type App struct {
 	input       views.Input
 	statusBar   components.StatusBar
 	modal       components.Modal
+	adminView   views.AdminView
 
 	registry   *actor.Registry
 	userStore  *storage.UserStore
@@ -125,6 +128,7 @@ func NewApp(
 		input:       views.NewInput(),
 		statusBar:   components.NewStatusBar(username),
 		modal:       components.NewModal(),
+		adminView:   views.NewAdminView(width, height, userStore, msgStore),
 		registry:    registry,
 		userStore:   userStore,
 		guildStore:  guildStore,
@@ -185,6 +189,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		case ViewChat:
 			return a.updateChatKeys(msg)
+		case ViewAdmin:
+			if key.Matches(msg, Keys.ToggleAdmin) {
+				a.viewState = ViewChat
+				return a, nil
+			}
+			var cmd tea.Cmd
+			a.adminView, cmd = a.adminView.Update(msg)
+			return a, cmd
+		case ViewBanned:
+			// Do nothing, only allow Ctrl+C to quit
+			return a, nil
 		}
 
 	case views.LoginSuccessMsg:
@@ -192,6 +207,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.viewState = ViewChat
 		a.focus = FocusInputArea
 		a.input = a.input.Focus()
+		a.adminView = a.adminView.SetUser(a.user)
 
 		displayName := a.user.DisplayName
 		if displayName == "" {
@@ -200,7 +216,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.statusBar = a.statusBar.SetUsername(displayName).SetConnected(true)
 		a.msgView = a.msgView.SetUsername(a.user.ID, displayName)
 
-		// 1. Initialize and register SessionActor
+		// Initialize and register SessionActor
 		a.sessionActor = actor.NewSessionActor(a.user.ID, a.user.Username, a.sessionID, a.program, a.registry)
 		sessionRef := actor.NewRef("session:"+a.sessionID, a.sessionActor, 512, a.logger)
 		a.registry.Register(sessionRef)
@@ -228,10 +244,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// 2. Initialize SessionSubscriber for Pub/Sub
+		// Initialize SessionSubscriber for Pub/Sub
 		a.subscriber = pubsub.NewSessionSubscriber(a.broker, a.sessionID, a.registry, a.logger)
 
-		// Post join announcement to #announcements
+		// Post join announcement
 		annMsgID := sfgen.Generate()
 		annMsg := &models.Message{
 			ID:         annMsgID,
@@ -272,8 +288,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.channels = msg.Channels
 		a.sidebar = a.sidebar.SetChannels(msg.Channels)
 
-		// Join and subscribe to ALL guild channels so real-time unread badges work across all channels!
+		// Join and subscribe to guild channels
 		if a.user != nil {
+			if a.subscriber != nil && a.currentGuild != nil {
+				_ = a.subscriber.SubscribeGuild(context.Background(), a.currentGuild.ID)
+			}
 			for _, ch := range msg.Channels {
 				guildID := ch.GuildID
 				if guildID == 0 && a.currentGuild != nil {
@@ -316,10 +335,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if a.currentChannel != nil && msg.Message.ChannelID == a.currentChannel.ID {
-			// Currently viewing this channel / DM -> display immediately
 			a.msgView = a.msgView.AddMessage(msg.Message)
 		} else {
-			// Message received for another channel or DM!
 			isDM := false
 			if a.user != nil && msg.Message.AuthorID != a.user.ID {
 				if msg.Message.ChannelID == models.DMChannelID(a.user.ID, msg.Message.AuthorID) {
@@ -328,7 +345,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			if isDM {
-				// 1-on-1 DM: show blue dot in DIRECT MESSAGES on right sidebar
 				authorName := msg.Message.AuthorName
 				if authorName == "" {
 					authorName = fmt.Sprintf("user_%d", msg.Message.AuthorID)
@@ -338,7 +354,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				a.membersView = a.membersView.AddOrUpdateDM(msg.Message.AuthorID, authorName, true)
 			} else {
-				// Server channel (#general, #dev): show blue dot beside that channel in left sidebar
 				a.sidebar = a.sidebar.MarkUnread(msg.Message.ChannelID)
 			}
 		}
@@ -347,6 +362,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case actor.MembersMsg:
 		a.membersView = a.membersView.SetUsers(msg.Users)
 		a.statusBar = a.statusBar.SetMemberCount(len(msg.Users))
+		a.adminView = a.adminView.SetOnlineCount(len(msg.Users))
 		return a, a.waitForActorMsg()
 
 	case actor.TypingMsg:
@@ -375,13 +391,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.msgView = a.msgView.AddMessage(botMsg)
 		}
 
-		// Broadcast message to channel / DM actor so all members see Spark's response!
+		// Broadcast message
 		channelRef := a.registry.GetOrCreateChannelActor(msg.ChannelID, msg.GuildID, a.msgStore, a.broker, a.logger)
 		channelRef.Send(actor.PostMessage{
 			Msg:          botMsg,
 			TargetUserID: msg.TargetDMUserID,
 		})
-		return a, nil
+		return a, a.waitForActorMsg()
 
 	case views.DMSelectedMsg:
 		if a.user != nil {
@@ -425,7 +441,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 
-		// Block message sending in read-only announcement channels
+		// Check read-only announcement channels
 		if a.currentChannel != nil && a.currentChannel.Type == models.ChannelTypeAnnouncement {
 			a.msgView = a.msgView.AddSystemMessage("🔒 #announcements is a read-only channel.")
 			return a, nil
@@ -775,11 +791,67 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.currentChannel == nil || a.currentChannel.ID != storage.DefaultAnnouncementsChannelID {
 			a.sidebar = a.sidebar.MarkUnread(storage.DefaultAnnouncementsChannelID)
 		}
-		return a, a.waitForActorMsg()
+		return a, nil
+
+	case actor.UserBannedMsg:
+		a.viewState = ViewBanned
+		return a, nil
+
+	case views.AdminMetricsLoadedMsg:
+		var cmd tea.Cmd
+		a.adminView, cmd = a.adminView.Update(msg)
+		cmds = append(cmds, cmd)
+
+	case views.AdminKickUserMsg:
+		ctx := context.Background()
+		targetUser, err := a.userStore.GetUserByUsername(ctx, msg.Username)
+		if err != nil {
+			a.adminView = a.adminView.SetKickMsg(fmt.Sprintf("❌ User '%s' not found.", msg.Username))
+			return a, nil
+		}
+		if targetUser.Username == a.user.Username {
+			a.adminView = a.adminView.SetKickMsg("❌ You cannot ban yourself.")
+			return a, nil
+		}
+
+		err = a.userStore.BanUser(ctx, targetUser.ID, targetUser.Username)
+		if err != nil {
+			a.adminView = a.adminView.SetKickMsg(fmt.Sprintf("❌ Failed to ban user: %v", err))
+			return a, nil
+		}
+
+		a.adminView = a.adminView.SetKickMsg(fmt.Sprintf("✅ Successfully banned @%s from the server.", targetUser.Username))
+
+		// Disconnect the banned user immediately
+		for _, ref := range a.registry.GetSessionsByUserID(targetUser.ID) {
+			ref.Send(actor.DeliverBan{})
+		}
+
+		// Broadcast announcement to #announcements
+		annMsgID := sfgen.Generate()
+		annMsg := &models.Message{
+			ID:         annMsgID,
+			ChannelID:  storage.DefaultAnnouncementsChannelID,
+			Bucket:     models.BucketFromSnowflake(annMsgID),
+			AuthorID:   models.SparkBotID,
+			AuthorName: "📢 System",
+			Content:    fmt.Sprintf("🔨 **@%s** has been permanently banned from the server by an Admin.", targetUser.Username),
+			CreatedAt:  models.TimeFromSnowflake(annMsgID),
+		}
+		chRef := a.registry.GetOrCreateChannelActor(
+			storage.DefaultAnnouncementsChannelID,
+			storage.DefaultCommunityGuildID,
+			a.msgStore,
+			a.broker,
+			a.logger,
+		)
+		chRef.Send(actor.PostMessage{Msg: annMsg})
+
+		return a, nil
 
 	case ErrorMsg:
 		a.err = msg.Err
-		return a, a.waitForActorMsg()
+		return a, nil
 	}
 
 	return a, tea.Batch(cmds...)
@@ -899,6 +971,11 @@ func (a *App) updateChatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.modal = a.modal.Show(components.ModalHelp, "Keyboard Shortcuts")
 		return a, nil
 	}
+	if key.Matches(msg, Keys.ToggleAdmin) && a.user != nil && a.user.Role == models.RoleAdmin {
+		a.viewState = ViewAdmin
+		a.adminView = a.adminView.SetOnlineCount(len(a.registry.GetOnlineUsers()))
+		return a, a.adminView.Init()
+	}
 
 	switch a.focus {
 	case FocusSidebarArea:
@@ -924,6 +1001,18 @@ func (a *App) View() string {
 		return a.renderLoginView()
 	case ViewChat:
 		return a.renderChatView()
+	case ViewAdmin:
+		return a.adminView.View()
+	case ViewBanned:
+		msg := "🔨 YOU HAVE BEEN PERMANENTLY BANNED FROM THIS SERVER.\n\nPress Ctrl+C to exit."
+		box := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(styles.Error).
+			Foreground(styles.Error).
+			Padding(2, 4).
+			Align(lipgloss.Center).
+			Render(msg)
+		return lipgloss.Place(a.width, a.height, lipgloss.Center, lipgloss.Center, box)
 	default:
 		return "Loading..."
 	}
@@ -1096,6 +1185,7 @@ func (a *App) waitForActorMsg() tea.Cmd {
 		return msg
 	}
 }
+
 
 func (a *App) loadGuilds() tea.Cmd {
 	return func() tea.Msg {
@@ -1336,7 +1426,7 @@ func (a *App) createChannel(name string) tea.Cmd {
 
 func (a *App) cleanup() {
 	if a.subscriber != nil {
-		a.subscriber.UnsubscribeAll()
+		go a.subscriber.UnsubscribeAll()
 	}
 	if a.currentChannel != nil && a.user != nil {
 		if ref, ok := a.registry.Get(fmt.Sprintf("channel:%d", a.currentChannel.ID)); ok {

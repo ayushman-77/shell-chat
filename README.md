@@ -4,7 +4,8 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Architecture](https://img.shields.io/badge/Architecture-Actor%20Model%20%2B%20Redis%20PubSub-green.svg)]()
+[![Architecture](https://img.shields.io/badge/Architecture-Event%20Driven%20Microservices-green.svg)]()
+[![Data](https://img.shields.io/badge/Data-Kafka%20%7C%20PostgreSQL%20%7C%20In--Memory-blue.svg)]()
 
 ---
 
@@ -28,7 +29,22 @@
 - **🔍 Message History Search** — Search past messages instantly across any channel or DM with `/search <query>`.
 - **🧮 Fast Math Calculator** — Evaluate arithmetic and scientific expressions with `/calc <expression>`.
 - **⏰ Localized 24h Time & Timezones** — 24-hour timestamps with live timezone switching via `/tz <offset/name>` (e.g. `/tz IST`, `/tz UTC`, `/tz +5:30`).
-- **🚀 High-Concurrency Architecture** — Dual-mode messaging pipeline combining an In-Memory Actor Model with **Redis Pub/Sub** for multi-node horizontal scaling and **ScyllaDB** storage.
+- **🛡️ Admin Dashboard (TUI)** — Role-based access control (RBAC). Admins can press `F10` to view real-time system health and PostgreSQL-powered analytics natively inside the terminal.
+- **🚀 Event-Driven Microservices Architecture** — Built for peta-byte scale data processing. The Go gateway handles high-concurrency SSH multiplexing and pushes events to an **Apache Kafka** cluster.
+- **🐘 Polyglot Persistence** — Uses **PostgreSQL** for relational identity management (Users, RBAC) and analytics, with **In-Memory** fallback for blazing-fast local development message storage.
+- **🐍 Agentic AI & Analytics Microservice** — A separate **Python FastAPI** service consumes the Kafka event stream in real-time to compute "Trending Words" and perform background AI grounding tasks.
+
+---
+
+## 🏗️ Architecture
+
+Shell Chat utilizes a distributed microservices architecture tailored for massive scale:
+
+1. **The Go Gateway (Monolith/TUI)**: Intercepts standard SSH connections and renders a Bubble Tea TUI. It handles real-time concurrency via an internal Actor Model.
+2. **Apache Kafka (Event Streaming)**: The backbone of the system. Every message is published to Kafka topics, guaranteeing durable, distributed event processing.
+3. **PostgreSQL (Identity & Analytics)**: Stores relational data like user roles and aggregates real-time metrics computed by background services.
+4. **Python Analytics Service (Agentic AI)**: An independent microservice that consumes the Kafka stream to analyze real-time chat data, updating Postgres metrics seamlessly via REST and background workers.
+5. **In-Memory Message Store**: Chat message history is currently stored in-memory, making the app blazingly fast and requiring zero configuration for local development.
 
 ---
 
@@ -60,19 +76,27 @@ Open any terminal on any device and connect:
 ssh localhost -p 10000
 
 # Or connect to your remote cloud server
-ssh your-server-ip -p 2222
+ssh your-server-ip -p 10000
+
+# Optional: Add to your ~/.ssh/config for quick access!
+# Host shell-chat
+#     HostName localhost
+#     Port 10000
+#
+# Then just type:
+# ssh shell-chat
 ```
 
 ### 3. Run with Docker
 
-If you prefer using Docker, a `Dockerfile` is provided for a lightweight, containerized build:
+If you prefer using Docker, the entire microservices stack (Go Gateway, PostgreSQL, Kafka, Python Analytics) is fully containerized with Docker Compose:
 
 ```bash
-# Build the Docker image
-docker build -t shell-chat:latest .
+# Build and run the entire stack in detached mode
+docker-compose up -d --build
 
-# Run the container (maps port 10000)
-docker run -d -p 10000:10000 --name shell-chat shell-chat:latest
+# The chat server will be available at:
+# ssh localhost -p 10000
 ```
 
 ---
@@ -92,6 +116,7 @@ docker run -d -p 10000:10000 --name shell-chat shell-chat:latest
 | `/calc <expr>` | Calculate math expressions (e.g. `/calc (1024 * 768) / 8`, `/calc sqrt(144)`) |
 | `/search <kw>` | Search past messages in current channel/DM (e.g. `/search deploy`) |
 | `/tz <offset>` | Change timezone (e.g. `/tz IST`, `/tz +5:30`, `/tz UTC`, `/tz EST`) |
+| `F10` | Toggle **Admin Dashboard** (Requires `admin` role in PostgreSQL) |
 | `Ctrl + C` | Disconnect and quit |
 
 ---

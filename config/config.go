@@ -13,12 +13,15 @@ type Config struct {
 	SSHPort     string
 	HostKeyPath string
 
-	// Redis settings
-	RedisAddr string
+	// Kafka settings
+	KafkaBrokers string
 
 	// ScyllaDB settings
 	ScyllaHosts    []string
 	ScyllaKeyspace string
+
+	// PostgreSQL settings
+	PostgresURI string
 
 	// Snowflake settings
 	SnowflakeNodeID int64
@@ -40,9 +43,10 @@ func Load() *Config {
 		SSHHost:         getEnv("SSH_HOST", "0.0.0.0"),
 		SSHPort:         getEnv("SSH_PORT", "10000"),
 		HostKeyPath:     getEnv("HOST_KEY_PATH", ".ssh/id_ed25519"),
-		RedisAddr:       getEnv("REDIS_ADDR", "localhost:6379"),
+		KafkaBrokers:    getEnv("KAFKA_BROKERS", "localhost:9092"),
 		ScyllaHosts:     getEnvSlice("SCYLLA_HOSTS", []string{"127.0.0.1"}),
 		ScyllaKeyspace:  getEnv("SCYLLA_KEYSPACE", "shell_chat"),
+		PostgresURI:     getEnv("POSTGRES_URI", "postgres://postgres:postgres@localhost:5432/shell_chat?sslmode=disable"),
 		SnowflakeNodeID: getEnvInt64("SNOWFLAKE_NODE_ID", 1),
 		GeminiAPIKey:    getEnv("GEMINI_API_KEY", ""),
 		GeminiModel:     getEnv("GEMINI_MODEL", "gemini-1.5-flash"),

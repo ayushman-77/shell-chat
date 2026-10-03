@@ -81,8 +81,53 @@ func (s *SessionSubscriber) UnsubscribeChannel(guildID, channelID int64) {
 		cancel()
 		delete(s.topics, topic)
 	}
-	if s.broker != nil {
-		_ = s.broker.Unsubscribe(context.Background(), topic)
+}
+
+// SubscribeGuild subscribes to a guild's event stream (presence, etc).
+func (s *SessionSubscriber) SubscribeGuild(ctx context.Context, guildID int64) error {
+	if s.broker == nil {
+		return nil
+	}
+
+	topic := GuildTopic(guildID)
+
+	s.mu.Lock()
+	if cancel, ok := s.topics[topic]; ok {
+		cancel()
+		delete(s.topics, topic)
+	}
+
+	subCtx, cancel := context.WithCancel(ctx)
+	s.topics[topic] = cancel
+	s.mu.Unlock()
+
+	ch, err := s.broker.Subscribe(subCtx, topic)
+	if err != nil {
+		s.mu.Lock()
+		cancel()
+		delete(s.topics, topic)
+		s.mu.Unlock()
+		return err
+	}
+
+	go func() {
+		for data := range ch {
+			s.handleEvent(data)
+		}
+	}()
+
+	return nil
+}
+
+// UnsubscribeGuild unsubscribes from a guild's event stream.
+func (s *SessionSubscriber) UnsubscribeGuild(guildID int64) {
+	topic := GuildTopic(guildID)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if cancel, ok := s.topics[topic]; ok {
+		cancel()
+		delete(s.topics, topic)
 	}
 }
 
@@ -94,9 +139,6 @@ func (s *SessionSubscriber) UnsubscribeAll() {
 	for topic, cancel := range s.topics {
 		cancel()
 		delete(s.topics, topic)
-		if s.broker != nil {
-			_ = s.broker.Unsubscribe(context.Background(), topic)
-		}
 	}
 }
 

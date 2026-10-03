@@ -17,6 +17,7 @@ import (
 	"github.com/ayushman-77/shell-chat/internal/snowflake"
 	sshserver "github.com/ayushman-77/shell-chat/internal/ssh"
 	"github.com/ayushman-77/shell-chat/internal/storage"
+	"github.com/ayushman-77/shell-chat/internal/storage/pgstore"
 )
 
 func main() {
@@ -44,10 +45,29 @@ func main() {
 	var guildStore *storage.GuildStore
 	var msgStore *storage.MessageStore
 
+	// Optional: Connect to PostgreSQL for Identity
+	var pg *pgstore.PGStore
+	if cfg.PostgresURI != "" {
+		var err error
+		pg, err = pgstore.New(cfg.PostgresURI)
+		if err != nil {
+			logger.Warn("Failed to connect to PostgreSQL, falling back to scylla/memory", "err", err)
+		} else {
+			logger.Info("Connected to PostgreSQL for Identity")
+			if err := pg.Migrate(context.Background()); err != nil {
+				logger.Fatal("Failed to run PostgreSQL migrations", "err", err)
+			}
+		}
+	}
+
 	db, err := storage.New(cfg.ScyllaHosts, cfg.ScyllaKeyspace)
 	if err != nil {
 		logger.Warn("ScyllaDB not available, running in-memory storage mode", "err", err)
-		userStore = storage.NewUserStore(nil)
+		if pg != nil {
+			userStore = storage.NewUserStore(nil, pg.DB)
+		} else {
+			userStore = storage.NewUserStore(nil, nil)
+		}
 		guildStore = storage.NewGuildStore(nil)
 		msgStore = storage.NewMessageStore(nil)
 
@@ -62,7 +82,11 @@ func main() {
 		}
 		logger.Info("Database migrations completed")
 
-		userStore = storage.NewUserStore(db)
+		if pg != nil {
+			userStore = storage.NewUserStore(db, pg.DB)
+		} else {
+			userStore = storage.NewUserStore(db, nil)
+		}
 		guildStore = storage.NewGuildStore(db)
 		msgStore = storage.NewMessageStore(db)
 	}
@@ -71,13 +95,13 @@ func main() {
 	coalescerInstance := coalescer.NewCoalescer(msgStore, guildStore, userStore)
 	logger.Info("Request coalescer initialized")
 
-	// 6. Connect to Redis (with automatic in-memory fallback)
-	broker, err := pubsub.NewBroker(cfg.RedisAddr, logger)
+	// 6. Connect to Kafka (with automatic in-memory fallback)
+	broker, err := pubsub.NewBroker(cfg.KafkaBrokers, logger)
 	if err != nil {
-		logger.Warn("Redis not available, running in-memory Pub/Sub broker", "err", err)
+		logger.Warn("Kafka not available, running in-memory event broker", "err", err)
 		broker = pubsub.NewMemoryBroker(logger)
 	} else {
-		logger.Info("Connected to Redis")
+		logger.Info("Connected to Kafka")
 	}
 	defer broker.Close()
 

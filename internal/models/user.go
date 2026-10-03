@@ -33,6 +33,13 @@ func (s UserStatus) String() string {
 	}
 }
 
+type UserRole string
+
+const (
+	RoleUser  UserRole = "user"
+	RoleAdmin UserRole = "admin"
+)
+
 // User represents a registered user in the system.
 type User struct {
 	ID           int64
@@ -40,5 +47,6 @@ type User struct {
 	DisplayName  string
 	PasswordHash string
 	Status       UserStatus
+	Role         UserRole
 	CreatedAt    time.Time
 }

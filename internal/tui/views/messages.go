@@ -148,7 +148,7 @@ func (m MessageView) SetSize(w, h int) MessageView {
 
 // SetMessages replaces all messages and re-renders.
 func (m MessageView) SetMessages(msgs []*models.Message) MessageView {
-	// Storage returns DESC (newest first). Reverse into ASC (oldest first) with deduplication.
+	// Reverse into ASC (oldest first) with deduplication.
 	seen := make(map[int64]bool)
 	var unique []*models.Message
 	for i := len(msgs) - 1; i >= 0; i-- {
@@ -187,7 +187,7 @@ func (m MessageView) UpdateUsername(userID int64, newUsername string) MessageVie
 
 // AddMessage appends a single message and re-renders in chronological order.
 func (m MessageView) AddMessage(msg *models.Message) MessageView {
-	// Deduplicate if already present by ID or exact content within 2 seconds
+	// Deduplicate if already present
 	for _, existing := range m.messages {
 		if existing.ID == msg.ID {
 			return m
@@ -203,7 +203,7 @@ func (m MessageView) AddMessage(msg *models.Message) MessageView {
 		}
 	}
 
-	// Insert in chronological ASC order by Snowflake ID
+	// Insert in chronological ASC order
 	inserted := false
 	for i, existing := range m.messages {
 		if msg.ID != 0 && existing.ID != 0 && msg.ID < existing.ID {
@@ -303,7 +303,7 @@ func (m MessageView) renderMessages() string {
 		return ""
 	}
 
-	// 1. Channel Welcome Banner (Always at the top for #announcements ONLY)
+	// Channel Welcome Banner
 	if m.channelName == "announcements" {
 		annHeader := lipgloss.NewStyle().
 			Width(usableWidth).
@@ -315,11 +315,11 @@ func (m MessageView) renderMessages() string {
 		fmt.Fprintf(&b, "\n%s\n\n%s\n\n", annHeader, styles.HelpStyle.Render(strings.Repeat("─", usableWidth)))
 	}
 
-	// 2. Messages stored in chronological ASC order (oldest first)
+	// Messages stored in chronological ASC order
 	for _, msg := range m.messages {
 		timestamp := m.formatTimestamp(msg.CreatedAt)
 
-		// Announcements Channel / System Announcements — Centered, fairly spaced, scrollable
+		// Announcements Channel / System Announcements
 		if m.channelName == "announcements" || (msg.AuthorID == models.SparkBotID && strings.HasPrefix(msg.AuthorName, "📢")) {
 			annText := msg.Content
 			annText = strings.ReplaceAll(annText, "**", "")
@@ -337,7 +337,7 @@ func (m MessageView) renderMessages() string {
 			continue
 		}
 
-		// System message with word wrapping and generous spacing
+		// System message
 		if msg.AuthorID == 0 {
 			fmt.Fprintf(&b, "\n")
 			sysWidth := max(10, m.viewport.Width-6)
@@ -371,7 +371,7 @@ func (m MessageView) renderMessages() string {
 		}
 
 		if msg.AuthorID != lastAuthor {
-			// New author header with user badge & timestamp
+			// New author header
 			if lastAuthor != 0 {
 				fmt.Fprintf(&b, "\n")
 			}
@@ -393,7 +393,7 @@ func (m MessageView) renderMessages() string {
 			fmt.Fprintf(&b, "  %s  %s\n", authorBadge, timeStr)
 		}
 
-		// Message content with colored left bar and word wrapping
+		// Message content
 		contentWidth := max(10, m.viewport.Width-8)
 		wrappedContent := lipgloss.NewStyle().
 			Width(contentWidth).

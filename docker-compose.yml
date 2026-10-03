@@ -1,0 +1,83 @@
+services:
+  # 1. PostgreSQL (Identity & Analytics Database)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: shell_chat
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Apache Kafka (Event Streaming)
+  kafka:
+    image: apache/kafka:3.7.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  # 3. Go Gateway (SSH Server & TUI)
+  go-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: root
+    ports:
+      - "10000:10000"
+    environment:
+      SSH_PORT: "10000"
+      POSTGRES_URI: "postgres://postgres:postgrespassword@postgres:5432/shell_chat?sslmode=disable"
+      KAFKA_BROKERS: "kafka:9092"
+      GEMINI_API_KEY: "${GEMINI_API_KEY}" # Will pull from your local .env if you have it
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ssh_keys:/app/.ssh
+
+  # 4. Python Agentic & Analytics Microservice
+  python-analytics:
+    build:
+      context: ./python-analytics
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_URI: "postgresql://postgres:postgrespassword@postgres:5432/shell_chat"
+      KAFKA_BROKERS: "kafka:9092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      go-gateway:
+        condition: service_started
+
+volumes:
+  pgdata:
+  ssh_keys:

@@ -16,6 +16,7 @@ type KeyMap struct {
 	CreateGuild   key.Binding
 	CreateChannel key.Binding
 	Escape        key.Binding
+	ToggleAdmin   key.Binding
 }
 
 // Keys is the default key binding configuration.
@@ -32,5 +33,6 @@ var Keys = KeyMap{
 	CreateGuild:   key.NewBinding(key.WithKeys("ctrl+g"), key.WithHelp("ctrl+g", "create server")),
 	CreateChannel: key.NewBinding(key.WithKeys("ctrl+n"), key.WithHelp("ctrl+n", "new channel")),
 	Escape:        key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "focus input")),
+	ToggleAdmin:   key.NewBinding(key.WithKeys("f10"), key.WithHelp("f10", "admin mode")),
 }
 
