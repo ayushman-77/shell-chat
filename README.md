@@ -112,7 +112,7 @@ docker-compose up -d --build
 | `Esc` | Return focus directly to chat input & jump to bottom |
 | `/help` | Open the interactive keyboard shortcuts and commands guide |
 | `/settings` | Open profile settings modal (update username/password) |
-| `/ask <prompt>` | Ask **Spark (🤖)** a question (grounded with real-time web search) |
+| `/ask <prompt>` | Ask **Spark** a question (grounded with real-time web search) |
 | `/calc <expr>` | Calculate math expressions (e.g. `/calc (1024 * 768) / 8`, `/calc sqrt(144)`) |
 | `/search <kw>` | Search past messages in current channel/DM (e.g. `/search deploy`) |
 | `/tz <offset>` | Change timezone (e.g. `/tz IST`, `/tz +5:30`, `/tz UTC`, `/tz EST`) |
