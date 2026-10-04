@@ -58,6 +58,11 @@ func (c *ChannelActor) Receive(msg Message) {
 			c.msgStore.RecordDMPartner(m.Msg.AuthorID, m.TargetUserID)
 		}
 
+		// 1b. Update real-time global metrics
+		if c.registry != nil {
+			c.registry.RecordMessage(m.Msg.AuthorName)
+		}
+
 		// 2. Persist the message to ScyllaDB
 		if c.msgStore != nil {
 			if err := c.msgStore.SaveMessage(ctx, m.Msg); err != nil {

@@ -19,13 +19,54 @@ type OnlineUser struct {
 // Registry manages all active actors in the system.
 type Registry struct {
 	mu     sync.RWMutex
-	actors map[string]*Ref
+	actors        map[string]*Ref
+	userMsgCounts map[string]int
+	topUser       string
+	topMsgs       int
 }
 
 // NewRegistry creates a new actor registry.
 func NewRegistry() *Registry {
 	return &Registry{
-		actors: make(map[string]*Ref),
+		actors:        make(map[string]*Ref),
+		userMsgCounts: make(map[string]int),
+	}
+}
+
+// RecordMessage records a message from a user and updates global stats.
+func (r *Registry) RecordMessage(username string) {
+	if username == "" || strings.HasPrefix(username, "📢") {
+		return // Skip system messages and empty authors
+	}
+	r.mu.Lock()
+	r.userMsgCounts[username]++
+	count := r.userMsgCounts[username]
+	if count > r.topMsgs {
+		r.topUser = "@" + username
+		r.topMsgs = count
+	}
+	r.mu.Unlock()
+	r.BroadcastAdminMetrics()
+}
+
+// BroadcastAdminMetrics sends the latest metrics to all sessions.
+func (r *Registry) BroadcastAdminMetrics() {
+	r.mu.RLock()
+	topUser := r.topUser
+	topMsgs := r.topMsgs
+	r.mu.RUnlock()
+
+	if topMsgs == 0 {
+		return
+	}
+
+	for id, ref := range r.actors {
+		if strings.HasPrefix(id, "session:") {
+			ref.Send(DeliverAdminMetrics{
+				TopUser: topUser,
+				TopMsgs: topMsgs,
+			})
+		}
 	}
 }
 

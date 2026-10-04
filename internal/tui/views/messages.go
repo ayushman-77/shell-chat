@@ -192,15 +192,6 @@ func (m MessageView) AddMessage(msg *models.Message) MessageView {
 		if existing.ID == msg.ID {
 			return m
 		}
-		if existing.AuthorID == msg.AuthorID && existing.Content == msg.Content {
-			diff := existing.CreatedAt.Sub(msg.CreatedAt)
-			if diff < 0 {
-				diff = -diff
-			}
-			if diff < 2*time.Second {
-				return m
-			}
-		}
 	}
 
 	// Insert in chronological ASC order

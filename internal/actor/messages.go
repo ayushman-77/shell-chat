@@ -84,3 +84,15 @@ type DeliverBan struct{}
 
 // UserBannedMsg is sent to the BubbleTea program to kick the active user.
 type UserBannedMsg struct{}
+
+// DeliverAdminMetrics is sent to a SessionActor to instantly update the admin dashboard.
+type DeliverAdminMetrics struct {
+	TopUser string
+	TopMsgs int
+}
+
+// AdminMetricsMsg is sent to the BubbleTea program.
+type AdminMetricsMsg struct {
+	TopUser string
+	TopMsgs int
+}

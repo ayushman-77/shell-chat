@@ -57,7 +57,7 @@ func (s *UserStore) CreateUser(ctx context.Context, user *models.User) error {
 	}
 
 	// In-memory mode
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		uCopy := *user
@@ -100,7 +100,7 @@ func (s *UserStore) CreateUser(ctx context.Context, user *models.User) error {
 
 // GetUserByID retrieves a user by their Snowflake ID.
 func (s *UserStore) GetUserByID(ctx context.Context, id int64) (*models.User, error) {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 		if u, ok := s.usersByID[id]; ok {
@@ -146,7 +146,7 @@ func (s *UserStore) GetUserByID(ctx context.Context, id int64) (*models.User, er
 
 // GetUserByUsername retrieves a user by their username.
 func (s *UserStore) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 		if u, ok := s.usersByName[username]; ok {
@@ -180,7 +180,7 @@ func (s *UserStore) GetUserByUsername(ctx context.Context, username string) (*mo
 
 // GetUserByPublicKey retrieves a user by their SSH public key fingerprint.
 func (s *UserStore) GetUserByPublicKey(ctx context.Context, fingerprint string) (*models.User, error) {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 		if u, ok := s.usersByPK[fingerprint]; ok {
@@ -214,7 +214,7 @@ func (s *UserStore) GetUserByPublicKey(ctx context.Context, fingerprint string) 
 
 // AddPublicKey associates an SSH public key with a user account.
 func (s *UserStore) AddPublicKey(ctx context.Context, userID int64, fingerprint, keyData string) error {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if u, ok := s.usersByID[userID]; ok {
@@ -244,7 +244,7 @@ func (s *UserStore) AddPublicKey(ctx context.Context, userID int64, fingerprint,
 
 // UpdateStatus updates a user's online status.
 func (s *UserStore) UpdateStatus(ctx context.Context, userID int64, status models.UserStatus) error {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if u, ok := s.usersByID[userID]; ok {
@@ -274,7 +274,7 @@ func (s *UserStore) UpdateStatus(ctx context.Context, userID int64, status model
 
 // UsernameExists checks if a username is already taken.
 func (s *UserStore) UsernameExists(ctx context.Context, username string) (bool, error) {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 		_, ok := s.usersByName[username]
@@ -316,7 +316,7 @@ func (s *UserStore) VerifyPassword(hashedPassword, password string) bool {
 
 // UpdateUsername updates a user's username across memory and database.
 func (s *UserStore) UpdateUsername(ctx context.Context, userID int64, oldUsername, newUsername string) error {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
@@ -365,7 +365,7 @@ func (s *UserStore) UpdatePassword(ctx context.Context, userID int64, newPasswor
 		return fmt.Errorf("hash password: %w", err)
 	}
 
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if u, ok := s.usersByID[userID]; ok {
@@ -392,7 +392,7 @@ func (s *UserStore) UpdatePassword(ctx context.Context, userID int64, newPasswor
 
 // BanUser permanently bans a user from the system by updating their role.
 func (s *UserStore) BanUser(ctx context.Context, userID int64, username string) error {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if u, ok := s.usersByID[userID]; ok {
@@ -420,7 +420,7 @@ func (s *UserStore) BanUser(ctx context.Context, userID int64, username string) 
 
 // GetTotalUsers returns the total number of registered users.
 func (s *UserStore) GetTotalUsers(ctx context.Context) int {
-	if s.db == nil {
+	if s.db == nil && s.pg == nil {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 		return len(s.usersByID)

@@ -138,6 +138,20 @@ func (s *SessionActor) Receive(msg Message) {
 		}:
 		default:
 		}
+	case DeliverAdminMetrics:
+		if prog != nil {
+			prog.Send(AdminMetricsMsg{
+				TopUser: m.TopUser,
+				TopMsgs: m.TopMsgs,
+			})
+		}
+		select {
+		case s.msgChan <- AdminMetricsMsg{
+			TopUser: m.TopUser,
+			TopMsgs: m.TopMsgs,
+		}:
+		default:
+		}
 	case DeliverBan:
 		if prog != nil {
 			prog.Send(UserBannedMsg{})

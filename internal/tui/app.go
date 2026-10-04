@@ -303,7 +303,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					UserID:    a.user.ID,
 					SessionID: a.sessionID,
 				})
-				if a.subscriber != nil && guildID != 0 {
+				if a.subscriber != nil {
 					_ = a.subscriber.SubscribeChannel(context.Background(), guildID, ch.ID)
 				}
 			}
@@ -373,6 +373,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case actor.SystemMsg:
 		a.msgView = a.msgView.AddSystemMessage(msg.Content)
+		return a, a.waitForActorMsg()
+		
+	case actor.AdminMetricsMsg:
+		a.adminView = a.adminView.UpdateTopUser(msg.TopUser, msg.TopMsgs)
 		return a, a.waitForActorMsg()
 
 	case SparkResponseMsg:

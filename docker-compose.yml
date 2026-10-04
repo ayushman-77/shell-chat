@@ -51,14 +51,14 @@ services:
       SSH_PORT: "10000"
       POSTGRES_URI: "postgres://postgres:postgrespassword@postgres:5432/shell_chat?sslmode=disable"
       KAFKA_BROKERS: "kafka:9092"
-      GEMINI_API_KEY: "${GEMINI_API_KEY}" # Will pull from your local .env if you have it
+      GEMINI_API_KEY: "${GEMINI_API_KEY}"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
     volumes:
-      - ssh_keys:/app/.ssh
+      - ./.ssh_keys:/app/.ssh
 
   # 4. Python Agentic & Analytics Microservice
   python-analytics:
@@ -80,4 +80,3 @@ services:
 
 volumes:
   pgdata:
-  ssh_keys:

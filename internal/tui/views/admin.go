@@ -2,7 +2,6 @@ package views
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -83,6 +82,12 @@ func (v AdminView) SetOnlineCount(count int) AdminView {
 	return v
 }
 
+func (v AdminView) UpdateTopUser(topUser string, topMsgs int) AdminView {
+	v.topUser = topUser
+	v.topMsgs = topMsgs
+	return v
+}
+
 func (v AdminView) LoadMetricsCmd() tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -91,27 +96,18 @@ func (v AdminView) LoadMetricsCmd() tea.Cmd {
 			totalUsers = v.userStore.GetTotalUsers(ctx)
 		}
 
-		topUser := "None"
-		topMsgs := 0
 		sysHealth := ""
-
-		// Fetch real analytics from the Python Microservice REST API (using Docker internal DNS)
-		resp, err := http.Get("http://python-analytics:8000/api/analytics/top-users")
+		// Check Python Analytics Health
+		resp, err := http.Get("http://python-analytics:8000/health")
 		if err != nil {
 			sysHealth = "⚠️ Partial Outage: Python Analytics Offline"
 		} else {
-			defer resp.Body.Close()
-			var topUsers []map[string]interface{}
-			if err := json.NewDecoder(resp.Body).Decode(&topUsers); err == nil && len(topUsers) > 0 {
-				topUser = "@" + topUsers[0]["username"].(string)
-				topMsgs = int(topUsers[0]["messages"].(float64))
-			}
+			resp.Body.Close()
+			sysHealth = "🟢 All systems operational"
 		}
 
 		return AdminMetricsLoadedMsg{
 			TotalUsers: totalUsers,
-			TopUser:    topUser,
-			TopMsgs:    topMsgs,
 			SysHealth:  sysHealth,
 		}
 	}
@@ -137,8 +133,10 @@ func (v AdminView) Update(msg tea.Msg) (AdminView, tea.Cmd) {
 		v.height = msg.Height
 	case AdminMetricsLoadedMsg:
 		v.totalUsers = msg.TotalUsers
-		v.topUser = msg.TopUser
-		v.topMsgs = msg.TopMsgs
+		if msg.TopUser != "" && msg.TopUser != "None" {
+			v.topUser = msg.TopUser
+			v.topMsgs = msg.TopMsgs
+		}
 		v.sysHealth = msg.SysHealth
 	case AdminTickMsg:
 		return v, tea.Batch(v.LoadMetricsCmd(), AdminTickCmd())
@@ -155,6 +153,7 @@ func (v AdminView) SetKickMsg(msg string) AdminView {
 	v.kickMsg = msg
 	return v
 }
+
 
 func (v AdminView) View() string {
 	box := lipgloss.NewStyle().
@@ -174,7 +173,7 @@ func (v AdminView) View() string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(styles.SurfaceHover).
 		Padding(1, 3).
-		Width(24).
+		Width(30).
 		Height(4).
 		Align(lipgloss.Center)
 
@@ -191,10 +190,14 @@ func (v AdminView) View() string {
 	// Box 3: Most Active User
 	activeTitle := lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render("MOST ACTIVE USER")
 	var activeVal string
-	if v.topUser == "None" {
+	if v.topUser == "None" || v.topUser == "" {
 		activeVal = lipgloss.NewStyle().Foreground(styles.TextDim).Bold(true).Render("N/A")
 	} else {
-		activeVal = lipgloss.NewStyle().Foreground(styles.TextBright).Bold(true).Render(fmt.Sprintf("%s", v.topUser))
+		dispUser := v.topUser
+		if len(dispUser) > 10 {
+			dispUser = dispUser[:10] + "..."
+		}
+		activeVal = lipgloss.NewStyle().Foreground(styles.TextBright).Bold(true).Render(fmt.Sprintf("%s (%d msgs)", dispUser, v.topMsgs))
 	}
 	b3 := statBox.Copy().BorderForeground(styles.Yellow).Render(lipgloss.JoinVertical(lipgloss.Center, activeTitle, "\n", activeVal))
 

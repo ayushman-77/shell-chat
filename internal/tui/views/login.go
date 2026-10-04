@@ -175,16 +175,23 @@ func (l LoginView) handleEnter() (LoginView, tea.Cmd) {
 		}
 
 		l.isNewUser = true
+		
+		if username == "admin" {
+			l.state = statePassword
+			l.password.Placeholder = "Enter admin password"
+			l.password.SetValue("")
+			l.username.Blur()
+			l.password.Focus()
+			l.errMsg = "Admin Initialization! Enter admin123."
+			return l, nil
+		}
+
 		l.state = stateRegisterPassword
 		l.password.Placeholder = "Choose a password"
 		l.password.SetValue("")
 		l.username.Blur()
 		l.password.Focus()
-		if username == "admin" {
-			l.errMsg = "Admin Initialization! Choose an admin password."
-		} else {
-			l.errMsg = "New account! Choose a password to register."
-		}
+		l.errMsg = "New account! Choose a password to register."
 		return l, nil
 
 	case statePassword:
@@ -192,6 +199,15 @@ func (l LoginView) handleEnter() (LoginView, tea.Cmd) {
 		if password == "" {
 			l.errMsg = "Password cannot be empty"
 			return l, nil
+		}
+
+		if l.username.Value() == "admin" && password != "admin123" {
+			l.errMsg = "Invalid password (must be admin123)"
+			return l, nil
+		}
+
+		if l.username.Value() == "admin" && l.isNewUser {
+			return l, l.registerUser("admin")
 		}
 
 		// Verify password
@@ -216,10 +232,7 @@ func (l LoginView) handleEnter() (LoginView, tea.Cmd) {
 			return l, nil
 		}
 		
-		if l.username.Value() == "admin" {
-			// Skip display name step for admin
-			return l, l.registerUser("admin")
-		}
+		// No longer needed for admin since admin bypasses stateRegisterConfirm entirely
 
 		l.state = stateRegisterDisplayName
 		l.confirm.Blur()
