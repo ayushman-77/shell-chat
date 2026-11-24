@@ -33,6 +33,10 @@ ssh 43.204.110.39 -p 10000
 > **First time connecting?**
 > - If prompted `Are you sure you want to continue connecting (yes/no/[fingerprint])?`, type **`yes`** and press **Enter**.
 > - Register with any username & password at the welcome prompt to start chatting!
+> - **Admin Credentials**:
+>   - **Username**: `admin`
+>   - **Password**: `admin123`
+>   - *(Press `F10` after logging in as admin to open the live Admin Dashboard & Analytics!)*
 
 ---
 

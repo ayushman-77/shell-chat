@@ -13,6 +13,7 @@ import (
 	"github.com/ayushman-77/shell-chat/config"
 	"github.com/ayushman-77/shell-chat/internal/actor"
 	"github.com/ayushman-77/shell-chat/internal/coalescer"
+	"github.com/ayushman-77/shell-chat/internal/models"
 	"github.com/ayushman-77/shell-chat/internal/pubsub"
 	"github.com/ayushman-77/shell-chat/internal/snowflake"
 	sshserver "github.com/ayushman-77/shell-chat/internal/ssh"
@@ -73,6 +74,7 @@ func main() {
 
 		// Seed a default public guild in in-memory mode
 		seedDefaultGuild(guildStore, msgStore)
+		seedDefaultAdmin(userStore)
 	} else {
 		defer db.Close()
 		logger.Info("Connected to ScyllaDB")
@@ -89,6 +91,7 @@ func main() {
 		}
 		guildStore = storage.NewGuildStore(db)
 		msgStore = storage.NewMessageStore(db)
+		seedDefaultAdmin(userStore)
 	}
 
 	// 5. Initialize Request Coalescer (Thundering Herd protection)
@@ -170,4 +173,18 @@ func main() {
 func seedDefaultGuild(guildStore *storage.GuildStore, msgStore *storage.MessageStore) {
 	ctx := context.Background()
 	_, _ = guildStore.EnsureDefaultCommunityGuild(ctx, 0)
+}
+
+func seedDefaultAdmin(userStore *storage.UserStore) {
+	ctx := context.Background()
+	exists, _ := userStore.UsernameExists(ctx, "admin")
+	if !exists {
+		_ = userStore.CreateUser(ctx, &models.User{
+			ID:           snowflake.Generate(),
+			Username:     "admin",
+			DisplayName:  "Admin",
+			PasswordHash: "admin123",
+			Role:         models.RoleAdmin,
+		})
+	}
 }
