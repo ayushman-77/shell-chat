@@ -17,6 +17,25 @@
 
 ---
 
+## 🌐 Live Demo
+
+You can connect and chat right now with zero installation. Open **Windows PowerShell**, **Command Prompt (cmd)**, or any terminal on macOS / Linux:
+
+```bash
+# Connect using the live domain:
+ssh shellchat.duckdns.org -p 10000
+
+# Or connect directly via server IP:
+ssh 43.204.110.39 -p 10000
+```
+
+> [!TIP]
+> **First time connecting?**
+> - If prompted `Are you sure you want to continue connecting (yes/no/[fingerprint])?`, type **`yes`** and press **Enter**.
+> - Register with any username & password at the welcome prompt to start chatting!
+
+---
+
 ## ✨ Features
 
 - **🌐 Zero Client Install** — Connect from any terminal on Windows, macOS, Linux, or Android (Termux) with standard OpenSSH: `ssh <server_ip> -p 10000`.
@@ -97,6 +116,70 @@ docker-compose up -d --build
 
 # The chat server will be available at:
 # ssh localhost -p 10000
+```
+
+---
+
+## ☁️ Deployment (AWS EC2 / Cloud VM)
+
+Deploying Shell Chat to AWS EC2 (or any cloud VM) to run 24/7 with a custom domain or static IP:
+
+### 1. Launch Instance & Security Group
+1. Launch an **Ubuntu 24.04 LTS** EC2 instance (`t3.micro` is Free Tier eligible).
+2. Under **Inbound Security Group Rules**, allow:
+   - **Port 22 (SSH)**: For server administration.
+   - **Port 10000 (Custom TCP)**: Source `0.0.0.0/0` (Anywhere) for Shell Chat.
+
+### 2. Setup Server & Environment
+SSH into your server and install Go & Git:
+```bash
+sudo apt update && sudo apt install -y golang-go git
+git clone https://github.com/ayushman-77/shell-chat.git
+cd shell-chat
+
+# Create your .env file with your Gemini API key
+cat << 'EOF' > .env
+GEMINI_API_KEY=your_gemini_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
+SSH_PORT=10000
+EOF
+
+# Compile the binary
+go build -ldflags="-s -w" -o shell-chat ./cmd/server
+```
+
+### 3. Run 24/7 with Systemd
+Create a service to auto-start the server on reboots and handle auto-restarts:
+```bash
+sudo tee /etc/systemd/system/shell-chat.service > /dev/null << 'EOF'
+[Unit]
+Description=Shell Chat Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shell-chat
+ExecStart=/home/ubuntu/shell-chat/shell-chat
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now shell-chat
+```
+
+### 4. Custom Domain & Static IP
+- **Static IP**: In EC2 Console, allocate an **Elastic IP** and associate it with your instance.
+- **Custom Domain**: Add an **A Record** pointing your domain (or subdomain like `chat.yourdomain.com`) to your Elastic IP. If using Cloudflare, set proxy status to **DNS only**.
+- **Free Subdomain (DuckDNS)**: Register a free domain at [duckdns.org](https://www.duckdns.org) and point it to your AWS Elastic IP.
+
+Users can then connect immediately from **Windows PowerShell**, **Command Prompt (cmd)**, or terminal:
+```bash
+ssh yourdomain.com -p 10000
 ```
 
 ---
